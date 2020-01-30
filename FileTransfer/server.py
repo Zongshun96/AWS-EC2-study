@@ -4,7 +4,7 @@ import subprocess
 import os
 import threading
 
-def Working(conn, addr):
+def Working(conn, addr, count):
     start_time = time.time()
 
     data = conn.recv(1024)
@@ -56,20 +56,31 @@ def Working(conn, addr):
             bashCommand3 = "rm -fr ./" + dirname
             print (bashCommand3)
             process3 = subprocess.Popen(bashCommand3.split(), stdout=subprocess.PIPE)
-        count = count+1
+        # count = count+1
         # max count
 
-count = 0
+def JobHandler(s):
+    count = 0
+    while True:
+        conn, addr = s.accept()     # Establish connection with client.
+        print ('Got connection from', addr)
+        threading.Thread(Working, (conn, addr, count)).start()
+        count = count + 1
+
+def HealthCheckHandler(s): # check memory utilization
+
+
 
 port = 50000                    # Reserve a port for your service every new transfer wants a new port or you must wait.
 s = socket.socket()             # Create a socket object
 s.bind(('', port))            # Bind to the port
 s.listen(5)                     # Now wait for client connection.
-
 print ('Server listening....')
+threading.Thread(JobHandler, (s)).start()
 
-
-while True:
-    conn, addr = s.accept()     # Establish connection with client.
-    print ('Got connection from', addr)
-    threading.Thread(Working, (conn, addr)).start()
+port = 50001                    # Reserve a port for your service every new transfer wants a new port or you must wait.
+s = socket.socket()             # Create a socket object
+s.bind(('', port))            # Bind to the port
+s.listen(5)                     # Now wait for client connection.
+print ('Server listening....')
+threading.Thread(HealthCheckHandler, (s)).start()
