@@ -15,7 +15,7 @@ REQid = 0
 
 def SendMSG(REQid, REQ):
     # Send message to SQS queue
-    global inqueue_url
+    # global inqueue_url
     response = sqs.send_message(
         QueueUrl=inqueue_url,
         DelaySeconds=0,
@@ -31,8 +31,8 @@ def SendMSG(REQid, REQ):
     )
     print(response)
 
-def RecvMSG():
-    global outqueue_url
+def RecvMSG(): # optimization: make this asych!
+    # global outqueue_url
     while True:
         # Receive message from SQS queue
         response = sqs.receive_message(
@@ -47,8 +47,11 @@ def RecvMSG():
             VisibilityTimeout=0, # don't prevent others to check this infomation.
             WaitTimeSeconds=20   # blocking instead of busy waiting
         )
+
         if 'Messages' not in response:
+            # didn't read anythin for the waiting time
             continue
+
         message = response['Messages'][0]
         receipt_handle = message['ReceiptHandle']
 
@@ -58,7 +61,8 @@ def RecvMSG():
             ReceiptHandle=receipt_handle
         )
         print('Received and deleted message: %s' % message['Body'])
-        c = ClientSockets[message['REQid']] # potentially if this EC2 instance down, this registration won't hold!!!!!!!!!!!!!! Use a DB?
+        # print(ClientSockets)
+        c = ClientSockets[int(message['MessageAttributes']['REQid']['StringValue'])] # potentially if this EC2 instance down, this registration won't hold!!!!!!!!!!!!!! Use a DB?
         c.send(message['Body'].encode('utf8'))
         c.close()
 
@@ -80,6 +84,7 @@ def PutREQ(c):
     write_lock.acquire()
     REQid = REQid+1
     ClientSockets[REQid]=c
+    # print(ClientSockets)
     write_lock.release()
     SendMSG(REQid, MSG['REQ'])
     # c.close()

@@ -10,6 +10,7 @@ import json
 import time
 
 sqs = boto3.client('sqs')
+elb = boto3.client('elbv2')
 inqueue_url = 'https://sqs.us-east-2.amazonaws.com/489788818582/in'
 outqueue_url = 'https://sqs.us-east-2.amazonaws.com/489788818582/out'
 url     = 'http://test-345378476.us-east-2.elb.amazonaws.com:80/predict'
@@ -41,55 +42,48 @@ def SendMSG(REQid, reply):
     print(response['MessageId'])
 
 def RecvMSG():
-    # print("!!!!!!!")
-    global url
-    global headers
-    global inqueue_url
-    # print("!!!!!!!")
-    # while True:
-    # Receive message from SQS queue
-    response = sqs.receive_message(
-        QueueUrl=inqueue_url,
-        AttributeNames=[
-            'SentTimestamp'
-        ],
-        MaxNumberOfMessages=1,  # larger number wait longer. Sth to config !!!!!!!!!!!!!
-        MessageAttributeNames=[
-            'All'
-        ],
-        VisibilityTimeout=0, # don't prevent others to check this infomation.
-        WaitTimeSeconds=20   # blocking instead of busy waiting !!!!!!
+    # global url
+    # global headers
+    # global inqueue_url
+    response = elb.describe_target_health(
+        TargetGroupArn='arn:aws:elasticloadbalancing:us-east-2:489788818582:targetgroup/TestingScaling/63da8e21b92317bb',
     )
-    # print("????")
-    if 'Messages' not in response:
-        return
-    message = response['Messages'][0]
-    receipt_handle = message['ReceiptHandle']
-    print(message)
-    # Delete received message from queue
-    sqs.delete_message(
-        QueueUrl=inqueue_url,
-        ReceiptHandle=receipt_handle
-    )
-    print('Received and deleted message: %s' % message['Body'])
-    print(message['MessageAttributes']['REQid']['StringValue'])
-    SendMSG(message['MessageAttributes']['REQid'], request(url, message['Body'], headers))
-    # c = ClientSockets[message['REQid']]
-    # c.send(message['Body'])
-    # c.close()
-
-
-# print_lock = threading.Lock()
-# write_lock = threading.Lock()
-
-# thread function
-# def PutREQ(c):
+    for tar in response['TargetHealthDescriptions']:
+        if tar['TargetHealth']['State'] == 'healthy':
+            # Receive message from SQS queue
+            response = sqs.receive_message(
+                QueueUrl=inqueue_url,
+                AttributeNames=[
+                    'SentTimestamp'
+                ],
+                MaxNumberOfMessages=1,  # larger number wait longer. Sth to config !!!!!!!!!!!!!
+                MessageAttributeNames=[
+                    'All'
+                ],
+                VisibilityTimeout=0, # don't prevent others to check this infomation.
+                WaitTimeSeconds=20   # blocking instead of busy waiting !!!!!!
+            )
+            # print("????")
+            if 'Messages' not in response:
+                return
+            message = response['Messages'][0]
+            receipt_handle = message['ReceiptHandle']
+            print(message)
+            # Delete received message from queue
+            sqs.delete_message(
+                QueueUrl=inqueue_url,
+                ReceiptHandle=receipt_handle
+            )
+            print('Received and deleted message: %s' % message['Body'])
+            print(message['MessageAttributes']['REQid']['StringValue'])
+            print(response)
+            # SendMSG(message['MessageAttributes']['REQid'], "request(url, message['Body'], headers)")
+            SendMSG(message['MessageAttributes']['REQid'], request(url, message['Body'], headers))
+            break;
 
 
 
 if __name__ == '__main__':
     while True:
         time.sleep(0.2)
-        start_new_thread(RecvMSG, ())
-    # RecvMSG()
-    # s.close()
+        RecvMSG()
