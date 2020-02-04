@@ -33,6 +33,7 @@ def SendMSG(REQid, REQ):
 
 def RecvMSG(): # optimization: make this asych!
     # global outqueue_url
+    global ClientSockets
     while True:
         # Receive message from SQS queue
         response = sqs.receive_message(
@@ -73,6 +74,7 @@ write_lock = threading.Lock()
 # thread function
 def PutREQ(c):
     global REQid
+    global ClientSockets
     data = c.recv(1024).decode('utf8')     # assume REQ less than 1024 bytes. fitting reqirement of SQS as well
     if not data:
         print('Bye')

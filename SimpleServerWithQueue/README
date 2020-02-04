@@ -1,0 +1,6 @@
+issues:
+    extra latency for SQS services / classic load balancer surge queue
+    health check interval
+
+TODO:
+    register target without auto scaling running.
