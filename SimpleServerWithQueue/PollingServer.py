@@ -13,7 +13,7 @@ sqs = boto3.client('sqs')
 elb = boto3.client('elbv2')
 inqueue_url = 'https://sqs.us-east-2.amazonaws.com/489788818582/in'
 outqueue_url = 'https://sqs.us-east-2.amazonaws.com/489788818582/out'
-url     = 'http://test-345378476.us-east-2.elb.amazonaws.com:80/predict'
+url     = 'http://ec2-3-134-94-199.us-east-2.compute.amazonaws.com:80/predict'
 # payload = '[6.0,  2.2, 4.0,  1.0 ]'
 headers = {'Content-Type':'application/json'}
 # ClientSockets = {} # size of dict is defined by the number of int
@@ -60,7 +60,7 @@ def RecvMSG():
                 MessageAttributeNames=[
                     'All'
                 ],
-                VisibilityTimeout=0, # don't prevent others to check this infomation.
+                VisibilityTimeout=10, # prevent other threads to check this infomation.
                 WaitTimeSeconds=20   # blocking instead of busy waiting !!!!!!
             )
             # print("????")
@@ -85,5 +85,6 @@ def RecvMSG():
 
 if __name__ == '__main__':
     while True:
-        time.sleep(0.2)
-        RecvMSG()
+        time.sleep(0.2) # don't make too much threads
+        # RecvMSG()       #
+        threading.Thread(target=RecvMSG, args=()).start()
