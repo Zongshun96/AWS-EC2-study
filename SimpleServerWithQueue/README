@@ -1,6 +1,13 @@
-issues:
-    extra latency for SQS services / classic load balancer surge queue
+Problem/TODO:
     health check interval
 
-TODO:
+Issues:
+    extra latency for SQS services / classic load balancer surge queue
+        seems not severe. the previous high latency was probably because my polling server was working sequentially(my stupid)
+
+Done:
     register target without auto scaling running.
+        instead of mannually run new instance, we decided to change the quota in AutoScaling and let it to keep the number of VM's stable at that value
+        So that load balancer can handle traffic drain instead of implement it myself.
+        aws cli command
+            aws autoscaling update-auto-scaling-group --auto-scaling-group-name "fixed number of running VMs" --min-size 10 --max-size 10
